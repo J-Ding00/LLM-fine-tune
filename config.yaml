@@ -1,0 +1,17 @@
+openai:
+  generate_model: gpt-4o-mini
+  eval_model: gpt-4o
+
+raw_transcripts_gen:
+  criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
+  num_samples_per_criteria: 5
+  output_file: data/test/raw_transcripts.jsonl
+  temperature: 1.2
+  max_tokens: 300
+
+webtext_load:
+  num_samples: 1000
+  raw_output_file: data/raw/openwebtext_sample.jsonl
+  criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
+  max_eval_tokens: 500
+  label_output_file: data/labeled/label_openwebtext_sample.jsonl
