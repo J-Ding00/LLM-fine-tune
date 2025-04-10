@@ -15,3 +15,8 @@ webtext_load:
   criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
   max_eval_tokens: 500
   label_output_file: data/labeled/label_openwebtext_sample.jsonl
+
+evaluation:
+  jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl]
+  jsonl_format_out: eval/json_format_rate.txt
+  clean_data_out: data/labeled/clean_label_openwebtext_sample.jsonl

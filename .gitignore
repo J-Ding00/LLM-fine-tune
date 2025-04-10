@@ -11,3 +11,4 @@ venv/
 
 # Data
 data/
+eval/*.txt

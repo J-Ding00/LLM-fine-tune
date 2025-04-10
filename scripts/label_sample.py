@@ -8,8 +8,9 @@ def generate_feedback(text, criteria, criteria_format, model, max_token_limit, m
     You are an expert speech evaluator. Given a transcript of a speaker's message, assess the communication quality in terms of the following traits:
     {criteria}
 
-    For each trait, assign a score from 1 to 10, where 10 is excellent and 1 is very poor. Then provide a short explanation (1–2 sentences) justifying your score for that trait.
-
+    For each trait, assign a score from 1 (poor) to 10 (excellent). Be honest and critical in your assessment without bias toward high scores. 
+    Then provide a short explanation (1–2 sentences) justifying your score for that trait.
+    
     The final output must be a JSON string with the exact format below:
     {criteria_format}
     """
