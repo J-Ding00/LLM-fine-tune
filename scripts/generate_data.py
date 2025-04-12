@@ -2,6 +2,7 @@
 import yaml
 import json
 from clients import openai_client
+import random
 
 def generate_transcript(criteria, num_per_criteria_category, temperature, max_tokens, gpt_model):
     """
@@ -34,6 +35,51 @@ def generate_transcript(criteria, num_per_criteria_category, temperature, max_to
         transcripts.append(response.output_text.strip())
     return transcripts
 
+def generate_negative_transcript_samples(n, trait, model, temperature, max_out_token, real_samples, output_file):
+    """
+    Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
+    """
+
+    system_prompt = f"""
+    You are a helpful assistant generating realistic speech transcript samples for training a speech evaluation model.
+
+    The transcript should intentionally and subtly lack the trait of "{trait}". Use natural, unscripted, and conversational language that reflects the absence of this trait. Do not mention the trait explicitly.
+
+    Each transcript should follow similar style, tone, and structure as the provided example — but use completely different content. Do not copy or closely paraphrase the original. The output should be similar to the provided example in length.
+
+    Each transcript should be distinct in content, tone, and structure from your previously generated transcripts.
+
+    Avoid including the title, and common speech openings like 'Hi,', 'So,', 'Hey,' or 'You know,' etc. Only output the content of transcript text.
+    """.strip()
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    with open(output_file, "a") as f:
+        for i in range(1, n + 1):
+
+            try:
+                user_prompt = f"""
+                {random.choice(real_samples)}
+                """.strip()
+
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages+[{"role": "user", "content": user_prompt}],
+                    temperature=temperature,
+                    max_tokens=max_out_token  # adjust as needed for target length
+                )
+
+                assistant_reply = response.choices[0].message.content.strip()
+
+                # Add to chat history
+                messages.append({"role": "assistant", "content": assistant_reply})
+                f.write(json.dumps({'id':i, 'trait':trait, 'text':assistant_reply}) + "\n")
+
+
+            except Exception as e:
+                print(f"⚠️ Error at sample {i}: {e}")
+                break
+
 if __name__ == "__main__":
     config_path = 'config.yaml'
     
@@ -41,33 +87,18 @@ if __name__ == "__main__":
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
-    num_samples = config['raw_transcripts_gen']['num_samples_per_criteria']
+    num_samples = config['raw_transcripts_gen']['num_samples']
     output_file = config['raw_transcripts_gen']['output_file']
-    criteria = config['raw_transcripts_gen']['criteria']
+    criteria = config['raw_transcripts_gen']['minority_criteria']
     temperature = config['raw_transcripts_gen']['temperature']
     max_tokens = config['raw_transcripts_gen']['max_tokens']
     gpt_model = config['openai']['generate_model']
+    real_sample_path = config['webtext_load']['raw_output_file']
 
-    idx = 1
-    for c in criteria:
-        transcripts = []
-        print(f"Generating {num_samples*2} transcripts in criteria {c} ...")
-        try:
-            transcript = generate_transcript(c, num_samples, temperature, max_tokens, gpt_model)
-            for t in transcript:
-                transcripts.append({
-                    "id": idx,
-                    "criteria": c,
-                    "transcript": t
-                })
-                idx += 1
+    with open(real_sample_path, "r") as f:
+        real_samples = [json.loads(l)['text'].strip() for l in f]
 
-            # Save the transcripts as JSON Lines (one JSON object per line).
-            with open(output_file, "a") as f:
-                for item in transcripts:
-                    f.write(json.dumps(item) + "\n")
-
-        except Exception as e:
-            print(f"Error generating transcripts in criteria {c}")
+    for trait in criteria:
+        generate_negative_transcript_samples(num_samples, trait, gpt_model, temperature, max_tokens, real_samples, output_file)
 
     

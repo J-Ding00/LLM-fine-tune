@@ -3,11 +3,11 @@ openai:
   eval_model: gpt-4o
 
 raw_transcripts_gen:
-  criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
-  num_samples_per_criteria: 5
-  output_file: data/test/raw_transcripts.jsonl
-  temperature: 1.2
-  max_tokens: 300
+  minority_criteria: [formality, persuasiveness, filler words, transition logic]
+  num_samples: 50
+  output_file: data/raw/generated_transcripts.jsonl
+  temperature: 1
+  max_tokens: 1000
 
 webtext_load:
   num_samples: 1000
