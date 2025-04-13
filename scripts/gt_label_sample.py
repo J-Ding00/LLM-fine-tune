@@ -56,10 +56,10 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    # input_file = config['webtext_load']['raw_output_file']
-    # output_file = config['gpt_data_label']['webtext_label_output_file']
-    input_file = config['raw_transcripts_gen']['output_file']
-    output_file = config['gpt_data_label']['generated_label_output_file']
+    input_file = config['webtext_load']['raw_output_file']
+    output_file = config['gpt_data_label']['webtext_label_output_file']
+    # input_file = config['raw_transcripts_gen']['output_file']
+    # output_file = config['gpt_data_label']['generated_label_output_file']
 
     criteria = config['data_process']['criteria']
     max_token_limit = config['gpt_data_label']['max_eval_tokens']

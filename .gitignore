@@ -12,3 +12,4 @@ venv/
 # Data
 data/
 eval/*.txt
+eval/*.jsonl

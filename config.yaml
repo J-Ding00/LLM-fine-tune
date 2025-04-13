@@ -18,6 +18,13 @@ gpt_data_label:
   webtext_label_output_file: data/labeled/label_openwebtext_sample.jsonl
   generated_label_output_file: data/labeled/label_generated_sample.jsonl
 
+pretrain_model:
+  model: Qwen/Qwen2.5-0.5B-Instruct
+  eval: 
+    pretrain_output: eval/pretrain_openwebtext_sample.jsonl
+    max_eval_tokens: 500
+
+
 data_process:
   criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
 
@@ -29,8 +36,13 @@ data_split:
   train_ratio: 0.8
   val_ratio: 0.1
 
+preprocess:
+  tokenizer: Qwen/Qwen2.5-0.5B-Instruct
+  min_words: 300
+  max_words: 1000
+
 evaluation:
-  jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl]
+  jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl, eval/pretrain_openwebtext_sample.jsonl]
   jsonl_generated_data_in: [data/labeled/label_generated_sample.jsonl]
   jsonl_format_out: eval/json_evaluation_metrics.txt
   jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt

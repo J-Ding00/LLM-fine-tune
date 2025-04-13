@@ -3,3 +3,8 @@ python-dotenv
 pyyaml
 datasets
 scikit-learn
+transformers
+torch
+
+# model specific
+accelerate
