@@ -21,6 +21,14 @@ gpt_data_label:
 data_process:
   criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
 
+data_split:
+  input: data/labeled/clean_label_openwebtext_sample.jsonl
+  output_dir: data
+  stratified_criteria: [formality, persuasiveness, transition logic]
+  threshold: 6
+  train_ratio: 0.8
+  val_ratio: 0.1
+
 evaluation:
   jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl]
   jsonl_generated_data_in: [data/labeled/label_generated_sample.jsonl]

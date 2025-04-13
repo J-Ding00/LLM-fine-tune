@@ -31,14 +31,20 @@ def filter_valid_examples(path, criteria, output_path):
             try:
                 outer = json.loads(line)
                 raw_label = outer.get("label")
+
+                # Try parsing the label, and fix if necessary
                 try:
                     label = json.loads(raw_label)
                 except json.JSONDecodeError:
-                    label = json.loads(json_simple_fix(raw_label))
+                    fixed_label_str = json_simple_fix(raw_label)
+                    label = json.loads(fixed_label_str)
+                    outer["label"] = fixed_label_str  # Update with cleaned label
 
+                # Validate structure
                 if is_valid_json_structure(label, criteria):
                     valid_lines += 1
-                    fout.write(line)
+                    fout.write(json.dumps(outer) + "\n")
+
             except Exception:
                 continue
 
@@ -48,11 +54,11 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    # eval_file_list = config['evaluation']['jsonl_format_in']
-    # output_file = config['evaluation']['clean_webtext_data_out']
-
     eval_file_list = config['evaluation']['jsonl_format_in']
-    output_file = config['evaluation']['clean_generated_data_out']
+    output_file = config['evaluation']['clean_webtext_data_out']
+
+    # eval_file_list = config['evaluation']['jsonl_format_in']
+    # output_file = config['evaluation']['clean_generated_data_out']
 
     criteria = config['data_process']['criteria']
 

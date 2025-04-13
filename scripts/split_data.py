@@ -1,83 +1,76 @@
 import json
-import random
 import os
-from pathlib import Path
-from collections import defaultdict
 import yaml
+from pathlib import Path
+from sklearn.model_selection import train_test_split
 
 def get_score_bin(score, threshold):
     return "high" if score > threshold else "low"
 
-def get_stratification_key(example, traits, threshold):
+def get_strat_key(sample, traits, threshold):
     try:
-        label = json.loads(example['label'])
-        bins = []
-        for trait in traits:
-            if trait in label:
-                bins.append(get_score_bin(label[trait]["score"], threshold))
+        label = json.loads(sample["label"])
+        bins = [get_score_bin(label[t]["score"], threshold) for t in traits if t in label]
         return "_".join(bins)
-    except Exception:
+    except Exception as e:
+        print(e)
         return "unknown"
 
-def write_jsonl(data, path):
+def write_jsonl(samples, path):
     with open(path, "w") as f:
-        for item in data:
-            f.write(json.dumps(item) + "\n")
+        for s in samples:
+            f.write(json.dumps(s) + "\n")
 
-def split_jsonl_stratified(input_path, traits, threshold, train_ratio=0.8, val_ratio=0.1, seed=42, output_dir="data"):
+def split_data(input_path, traits, threshold, output_dir, seed=42, train_ratio=0.8, val_ratio=0.1):
     with open(input_path, "r") as f:
-        raw_lines = [json.loads(line.strip()) for line in f if line.strip()]
+        samples = [json.loads(line) for line in f if line.strip()]
 
-    random.seed(seed)
-    stratified_groups = defaultdict(list)
+    keys = [get_strat_key(s, traits, threshold) for s in samples]
+    print(keys)
+    from collections import Counter
+    print(Counter(keys))
 
-    for ex in raw_lines:
-        key = get_stratification_key(ex, traits, threshold)
-        stratified_groups[key].append(ex)
+    # 1st split: train vs temp (val+test)
+    train_samples, temp_samples, train_keys, temp_keys = train_test_split(
+        samples, keys, stratify=keys, test_size=1 - train_ratio, random_state=seed
+    )
 
-    train_set, val_set, test_set = [], [], []
+    # 2nd split: val vs test (from temp)
+    relative_val_ratio = val_ratio / (1 - train_ratio)  # adjust for reduced size
+    val_samples, test_samples, _, _ = train_test_split(
+        temp_samples, temp_keys, stratify=temp_keys, test_size=1 - relative_val_ratio, random_state=seed
+    )
 
-    for key, group in stratified_groups.items():
-        random.shuffle(group)
-        total = len(group)
-        train_end = int(total * train_ratio)
-        val_end = train_end + int(total * val_ratio)
-
-        train_set.extend(group[:train_end])
-        val_set.extend(group[train_end:val_end])
-        test_set.extend(group[val_end:])
-
-    print(f"Stratified by traits: {traits} with global threshold: {threshold}")
-    print(f"Total samples: {len(raw_lines)} | Train: {len(train_set)} | Val: {len(val_set)} | Test: {len(test_set)}")
-
+    # Output files
+    input_name = Path(input_path).stem
     os.makedirs(f"{output_dir}/train", exist_ok=True)
     os.makedirs(f"{output_dir}/val", exist_ok=True)
     os.makedirs(f"{output_dir}/test", exist_ok=True)
 
-    input_name = Path(input_path).stem
-    write_jsonl(train_set, f"{output_dir}/train/{input_name}_train.jsonl")
-    write_jsonl(val_set, f"{output_dir}/val/{input_name}_val.jsonl")
-    write_jsonl(test_set, f"{output_dir}/test/{input_name}_test.jsonl")
+    write_jsonl(train_samples, f"{output_dir}/train/{input_name}_train.jsonl")
+    write_jsonl(val_samples, f"{output_dir}/val/{input_name}_val.jsonl")
+    write_jsonl(test_samples, f"{output_dir}/test/{input_name}_test.jsonl")
 
+    print("Data split complete.")
+    print(f"Train: {len(train_samples)}, Val: {len(val_samples)}, Test: {len(test_samples)}")
 
 if __name__ == "__main__":
+
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
     input_path = config["data_split"]["input"]
     output_dir = config["data_split"]["output_dir"]
-    traits = config["data_split"]["traits"]
+    traits = config["data_split"]["stratified_criteria"]
     threshold = config["data_split"]["threshold"]
     train_ratio = config["data_split"].get("train_ratio", 0.8)
     val_ratio = config["data_split"].get("val_ratio", 0.1)
-    seed = config["data_split"].get("seed", 42)
 
-    split_jsonl_stratified(
+    split_data(
         input_path=input_path,
         traits=traits,
         threshold=threshold,
+        output_dir=output_dir,
         train_ratio=train_ratio,
-        val_ratio=val_ratio,
-        seed=seed,
-        output_dir=output_dir
+        val_ratio=val_ratio
     )
