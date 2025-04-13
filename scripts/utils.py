@@ -36,5 +36,5 @@ def average_transcript_length(jsonl_path):
 
 if __name__ == "__main__":
     # print_folder_structure(".")
-    average_transcript_length('data/raw/openwebtext_sample.jsonl')
+    # average_transcript_length('data/raw/openwebtext_sample.jsonl')
     exit()

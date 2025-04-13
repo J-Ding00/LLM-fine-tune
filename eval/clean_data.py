@@ -48,9 +48,13 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
+    # eval_file_list = config['evaluation']['jsonl_format_in']
+    # output_file = config['evaluation']['clean_webtext_data_out']
+
     eval_file_list = config['evaluation']['jsonl_format_in']
-    output_file = config['evaluation']['clean_data_out']
-    criteria = config['webtext_load']['criteria']
+    output_file = config['evaluation']['clean_generated_data_out']
+
+    criteria = config['data_process']['criteria']
 
     for file in eval_file_list:
         filter_valid_examples(file, criteria, output_file)

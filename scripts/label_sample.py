@@ -46,6 +46,8 @@ def label_batch(input_path, output_path, criteria, model, max_token_limit):
             try:
                 feedback = generate_feedback(transcript, criteria, criteria_format, model, max_token_limit)
                 labeled = {"id":id, "text": transcript, "label": feedback}
+                if 'trait' in example:
+                    labeled['trait'] = example['trait']
                 fout.write(json.dumps(labeled) + "\n")
             except Exception as e:
                 print(f"[Error] Skipping sample {id} due to failure: {e}")
@@ -54,10 +56,13 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    input_file = config['webtext_load']['raw_output_file']
-    output_file = config['webtext_load']['label_output_file']
-    criteria = config['webtext_load']['criteria']
-    max_token_limit = config['webtext_load']['max_eval_tokens']
+    # input_file = config['webtext_load']['raw_output_file']
+    # output_file = config['gpt_data_label']['webtext_label_output_file']
+    input_file = config['raw_transcripts_gen']['output_file']
+    output_file = config['gpt_data_label']['generated_label_output_file']
+
+    criteria = config['data_process']['criteria']
+    max_token_limit = config['gpt_data_label']['max_eval_tokens']
     model = config['openai']['generate_model']
 
     label_batch(input_file, output_file, criteria, model, max_token_limit)

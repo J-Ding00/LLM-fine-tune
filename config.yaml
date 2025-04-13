@@ -12,11 +12,20 @@ raw_transcripts_gen:
 webtext_load:
   num_samples: 1000
   raw_output_file: data/raw/openwebtext_sample.jsonl
-  criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
+
+gpt_data_label:
   max_eval_tokens: 500
-  label_output_file: data/labeled/label_openwebtext_sample.jsonl
+  webtext_label_output_file: data/labeled/label_openwebtext_sample.jsonl
+  generated_label_output_file: data/labeled/label_generated_sample.jsonl
+
+data_process:
+  criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
 
 evaluation:
   jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl]
-  jsonl_format_out: eval/json_format_rate.txt
-  clean_data_out: data/labeled/clean_label_openwebtext_sample.jsonl
+  jsonl_generated_data_in: [data/labeled/label_generated_sample.jsonl]
+  jsonl_format_out: eval/json_evaluation_metrics.txt
+  jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt
+  clean_webtext_data_out: data/labeled/clean_label_openwebtext_sample.jsonl
+  clean_generated_data_out: data/labeled/clean_label_generated_sample.jsonl
+  score_threshold: [5, 6]

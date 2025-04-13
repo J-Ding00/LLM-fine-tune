@@ -24,7 +24,7 @@ def is_valid_json_structure(obj, criteria):
             return False, f"Feedback in '{field}' is not str"
     return True, None
 
-def validate_and_analyze_jsonl(path, criteria):
+def validate_and_analyze_jsonl(path, criteria, score_threshold):
     with open(path, "r") as f:
         lines = f.readlines()
 
@@ -32,8 +32,8 @@ def validate_and_analyze_jsonl(path, criteria):
     valid = 0
     invalid_lines = []
     trait_stats = {trait: {
-        "count_above_5": 0,
-        "count_5_or_below": 0,
+        f"count_above_{score_threshold}": 0,
+        f"count_{score_threshold}_or_below": 0,
         "sum": 0,
         "scores": [],
         "total": 0
@@ -67,13 +67,13 @@ def validate_and_analyze_jsonl(path, criteria):
             trait_stats[trait]["scores"].append(score)
             trait_stats[trait]["sum"] += score
             trait_stats[trait]["total"] += 1
-            if score > 5:
-                trait_stats[trait]["count_above_5"] += 1
+            if score > score_threshold:
+                trait_stats[trait][f"count_above_{score_threshold}"] += 1
             else:
-                trait_stats[trait]["count_5_or_below"] += 1
+                trait_stats[trait][f"count_{score_threshold}_or_below"] += 1
 
     metrics = [
-        f"\n{path} check:\n",
+        f"\n{path} check with score threshold {score_threshold}:\n",
         f"Valid samples: {valid}/{total}\n",
         f"Invalid samples: {total - valid}\n",
         "\nSample errors (up to 10 shown):\n"
@@ -88,8 +88,9 @@ def validate_and_analyze_jsonl(path, criteria):
         avg = stats["sum"] / total
         metrics.append(f"\nTrait: {trait}\n")
         metrics.append(f"  Avg Score: {avg:.2f}\n")
-        metrics.append(f"  >5: {stats['count_above_5']} | <=5: {stats['count_5_or_below']}\n")
+        metrics.append(f"  >{score_threshold}: {stats[f'count_above_{score_threshold}']} | <={score_threshold}: {stats[f'count_{score_threshold}_or_below']}\n")
         metrics.append(f"  Min: {min(stats['scores'])}, Max: {max(stats['scores'])}\n")
+    metrics.append('\n\n')
 
     return metrics
 
@@ -99,12 +100,14 @@ if __name__ == "__main__":
 
     eval_file_list = config['evaluation']['jsonl_format_in']
     output_path = config['evaluation']['jsonl_format_out']
-    criteria = config['webtext_load']['criteria']
+    criteria = config['data_process']['criteria']
+    score_threshold = config['evaluation']['score_threshold']
 
     with open(output_path, "a") as out:
         for file in eval_file_list:
-            metrics = validate_and_analyze_jsonl(file, criteria)
-            out.writelines(metrics)
-            print(f"Finished: {file}")
+            for score in score_threshold:
+                metrics = validate_and_analyze_jsonl(file, criteria, score)
+                out.writelines(metrics)
+                print(f"Finished: {file}")
 
     print("All files processed. Metrics written to:", output_path)
