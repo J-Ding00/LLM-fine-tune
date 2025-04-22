@@ -3,6 +3,7 @@ import yaml
 import json
 from clients import openai_client
 import random
+import os
 
 def generate_transcript(criteria, num_per_criteria_category, temperature, max_tokens, gpt_model):
     """
@@ -35,45 +36,164 @@ def generate_transcript(criteria, num_per_criteria_category, temperature, max_to
         transcripts.append(response.output_text.strip())
     return transcripts
 
-def generate_negative_transcript_samples(n, trait, model, temperature, max_out_token, real_samples, output_file):
+def generate_negative_formality_transcript_samples(n, model, temperature, max_out_token, real_samples, output_folder):
     """
     Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
     """
 
-    system_prompt = f"""
-    You are a helpful assistant generating realistic speech transcript samples for training a speech evaluation model.
-
-    The transcript should intentionally and subtly lack the trait of "{trait}". Use natural, unscripted, and conversational language that reflects the absence of this trait. Do not mention the trait explicitly.
-
-    Each transcript should follow similar style, tone, and structure as the provided example — but use completely different content. Do not copy or closely paraphrase the original. The output should be similar to the provided example in length.
-
-    Each transcript should be distinct in content, tone, and structure from your previously generated transcripts.
-
-    Avoid including the title, and common speech openings like 'Hi,', 'So,', 'Hey,' or 'You know,' etc. Only output the content of transcript text.
-    """.strip()
-
-    messages = [{"role": "system", "content": system_prompt}]
+    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    output_file = os.path.join(output_folder, 'generated_bad_formality.jsonl')
 
     with open(output_file, "a") as f:
         for i in range(1, n + 1):
-
+            
             try:
+                sample = random.choice(real_samples)
+
                 user_prompt = f"""
-                {random.choice(real_samples)}
+                You are given a reference article-style sample.
+
+                Imitate a casual blogger who uses informal language, contractions, or slang inappropriately in a serious context, rewrite the sample in a way that **lacks formality**.
+
+                Only output the transcript content.
+
+                ### Reference Sample:
+                {sample.strip()}
                 """.strip()
 
                 response = openai_client.chat.completions.create(
                     model=model,
-                    messages=messages+[{"role": "user", "content": user_prompt}],
+                    messages=[{"role": "system", "content": system_prompt}, 
+                                       {"role": "user", "content": user_prompt}],
                     temperature=temperature,
                     max_tokens=max_out_token  # adjust as needed for target length
                 )
 
                 assistant_reply = response.choices[0].message.content.strip()
+                f.write(json.dumps({'id':i, 'trait':'formality', 'text':assistant_reply, 'original':sample}) + "\n")
 
-                # Add to chat history
-                messages.append({"role": "assistant", "content": assistant_reply})
-                f.write(json.dumps({'id':i, 'trait':trait, 'text':assistant_reply}) + "\n")
+
+            except Exception as e:
+                print(f"⚠️ Error at sample {i}: {e}")
+                break
+
+def generate_negative_persuasion_transcript_samples(n, model, temperature, max_out_token, real_samples, output_folder):
+    """
+    Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
+    """
+
+    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    output_file = os.path.join(output_folder, 'generated_bad_persuasion.jsonl')
+
+    with open(output_file, "a") as f:
+        for i in range(1, n + 1):
+            
+            try:
+                sample = random.choice(real_samples)
+
+                user_prompt = f"""
+                You are given a reference article-style sample.
+
+                Imitate a passive commentator who avoids strong arguments and fails to support claims with logic or evidence, rewrite the sample in a way that **lacks persuasiveness**.
+
+                Only output the transcript content.
+
+                ### Reference Sample:
+                {sample.strip()}
+                """.strip()
+
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": system_prompt}, 
+                                       {"role": "user", "content": user_prompt}],
+                    temperature=temperature,
+                    max_tokens=max_out_token  # adjust as needed for target length
+                )
+
+                assistant_reply = response.choices[0].message.content.strip()
+                f.write(json.dumps({'id':i, 'trait':'persuasiveness', 'text':assistant_reply, 'original':sample}) + "\n")
+
+
+            except Exception as e:
+                print(f"⚠️ Error at sample {i}: {e}")
+                break
+
+def generate_negative_transition_logic_transcript_samples(n, model, temperature, max_out_token, real_samples, output_folder):
+    """
+    Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
+    """
+
+    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    output_file = os.path.join(output_folder, 'generated_bad_transition_logic.jsonl')
+
+    with open(output_file, "a") as f:
+        for i in range(1, n + 1):
+            
+            try:
+                sample = random.choice(real_samples)
+
+                user_prompt = f"""
+                You are given a reference article-style sample.
+ 
+                Imitate a disorganized writer who jumps between ideas without smooth transitions or coherent flow, rewrite the sample in a way that **lacks clear transition logic**.
+
+                Only output the transcript content.
+
+                ### Reference Sample:
+                {sample.strip()}
+                """.strip()
+
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": system_prompt}, 
+                                       {"role": "user", "content": user_prompt}],
+                    temperature=temperature,
+                    max_tokens=max_out_token  # adjust as needed for target length
+                )
+
+                assistant_reply = response.choices[0].message.content.strip()
+                f.write(json.dumps({'id':i, 'trait':'transition logic', 'text':assistant_reply, 'original':sample}) + "\n")
+
+
+            except Exception as e:
+                print(f"⚠️ Error at sample {i}: {e}")
+                break
+
+def generate_negative_filler_words_transcript_samples(n, model, temperature, max_out_token, real_samples, output_folder):
+    """
+    Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
+    """
+
+    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    output_file = os.path.join(output_folder, 'generated_bad_filler_words.jsonl')
+
+    with open(output_file, "a") as f:
+        for i in range(1, n + 1):
+            
+            try:
+                sample = random.choice(real_samples)
+
+                user_prompt = f"""
+                You are given a reference article-style sample.
+
+                Imitate a rambling thinker who overuses vague expressions and redundant connectors, rewrite the sample in a way that **includes filler words**.
+
+                Only output the transcript content.
+
+                ### Reference Sample:
+                {sample.strip()}
+                """.strip()
+
+                response = openai_client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": system_prompt}, 
+                                       {"role": "user", "content": user_prompt}],
+                    temperature=temperature,
+                    max_tokens=max_out_token  # adjust as needed for target length
+                )
+
+                assistant_reply = response.choices[0].message.content.strip()
+                f.write(json.dumps({'id':i, 'trait':'filler words', 'text':assistant_reply, 'original':sample}) + "\n")
 
 
             except Exception as e:
@@ -88,8 +208,8 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
     
     num_samples = config['raw_transcripts_gen']['num_samples']
-    output_file = config['raw_transcripts_gen']['output_file']
-    criteria = config['raw_transcripts_gen']['minority_criteria']
+    output_folder = config['raw_transcripts_gen']['output_folder']
+    # criteria = config['raw_transcripts_gen']['minority_criteria_persona']
     temperature = config['raw_transcripts_gen']['temperature']
     max_tokens = config['raw_transcripts_gen']['max_tokens']
     gpt_model = config['openai']['generate_model']
@@ -98,7 +218,10 @@ if __name__ == "__main__":
     with open(real_sample_path, "r") as f:
         real_samples = [json.loads(l)['text'].strip() for l in f]
 
-    for trait in criteria:
-        generate_negative_transcript_samples(num_samples, trait, gpt_model, temperature, max_tokens, real_samples, output_file)
+    # for trait, prompt in criteria.items():
+    generate_negative_formality_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    generate_negative_transition_logic_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    generate_negative_persuasion_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    generate_negative_filler_words_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
 
     

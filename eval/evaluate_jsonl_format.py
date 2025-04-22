@@ -1,6 +1,7 @@
 import json
 import yaml
 import re
+import os
 
 def json_simple_fix(text):
     text = re.sub(r',\s*([}\]])', r'\1', text)
@@ -98,7 +99,9 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    eval_file_list = config['evaluation']['jsonl_format_in']
+    # eval_file_list = config['evaluation']['jsonl_format_in']
+    eval_file_list = [os.path.join(config['evaluation']['jsonl_generated_data_in'], f) for f in os.listdir(config['evaluation']['jsonl_generated_data_in'])]
+    print(eval_file_list)
     output_path = config['evaluation']['jsonl_format_out']
     criteria = config['data_process']['criteria']
     score_threshold = config['evaluation']['score_threshold']

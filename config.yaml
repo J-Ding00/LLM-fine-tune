@@ -3,9 +3,13 @@ openai:
   eval_model: gpt-4o
 
 raw_transcripts_gen:
-  minority_criteria: [formality, persuasiveness, filler words, transition logic]
+  minority_criteria_persona:
+    formality: a casual blogger who uses slang, contractions, or informal tone even in serious topics, 
+    persuasiveness: a passive commentator who presents weak arguments without clear evidence or confidence,
+    filler words: a rambling writer who uses repetitive, vague phrasing or redundant connectors,
+    transition logic: A disorganized writer whose paragraphs jump between ideas without clear transitions or structure
   num_samples: 50
-  output_file: data/raw/generated_transcripts.jsonl
+  output_folder: data/labeled/generated
   temperature: 1
   max_tokens: 1000
 
@@ -43,7 +47,7 @@ preprocess:
 
 evaluation:
   jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl, eval/pretrain_openwebtext_sample.jsonl]
-  jsonl_generated_data_in: [data/labeled/label_generated_sample.jsonl]
+  jsonl_generated_data_in: data/labeled/generated
   jsonl_format_out: eval/json_evaluation_metrics.txt
   jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt
   clean_webtext_data_out: data/labeled/clean_label_openwebtext_sample.jsonl
