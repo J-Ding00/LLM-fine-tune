@@ -26,9 +26,9 @@ def split_data(input_path, traits, threshold, output_dir, seed=42, train_ratio=0
         samples = [json.loads(line) for line in f if line.strip()]
 
     keys = [get_strat_key(s, traits, threshold) for s in samples]
-    print(keys)
-    from collections import Counter
-    print(Counter(keys))
+    # print(keys)
+    # from collections import Counter
+    # print(Counter(keys))
 
     # 1st split: train vs temp (val+test)
     train_samples, temp_samples, train_keys, temp_keys = train_test_split(

@@ -26,10 +26,11 @@ def is_valid_json_structure(obj, criteria):
 
 def filter_valid_examples(path, criteria, output_path):
     valid_lines = 0
-    with open(path, "r") as fin, open(output_path, "w") as fout:
+    with open(path, "r") as fin, open(output_path, "a") as fout:
         for idx, line in enumerate(fin):
             try:
                 outer = json.loads(line)
+                del(outer['id'])
                 raw_label = outer.get("label")
 
                 # Try parsing the label, and fix if necessary
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
 
     eval_file_list = config['evaluation']['jsonl_format_in']
-    output_file = config['evaluation']['clean_webtext_data_out']
+    output_file = config['evaluation']['clean_data_out']
 
     # eval_file_list = config['evaluation']['jsonl_format_in']
     # output_file = config['evaluation']['clean_generated_data_out']

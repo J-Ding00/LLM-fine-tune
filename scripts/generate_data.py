@@ -41,7 +41,7 @@ def generate_negative_formality_transcript_samples(n, model, temperature, max_ou
     Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
     """
 
-    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    system_prompt = "You are an assistant with a persona who rewrites reference sample for training a communication evaluation model. Do not include any introductory phrases or openings; start directly with the main content."
     output_file = os.path.join(output_folder, 'generated_bad_formality.jsonl')
 
     with open(output_file, "a") as f:
@@ -82,7 +82,7 @@ def generate_negative_persuasion_transcript_samples(n, model, temperature, max_o
     Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
     """
 
-    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    system_prompt = "You are an assistant with a persona who rewrites reference sample for training a communication evaluation model. Do not include any introductory phrases or openings; start directly with the main content."
     output_file = os.path.join(output_folder, 'generated_bad_persuasion.jsonl')
 
     with open(output_file, "a") as f:
@@ -123,7 +123,7 @@ def generate_negative_transition_logic_transcript_samples(n, model, temperature,
     Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
     """
 
-    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    system_prompt = "You are an assistant with a persona who rewrites reference sample for training a communication evaluation model. Do not include any introductory phrases or openings; start directly with the main content."
     output_file = os.path.join(output_folder, 'generated_bad_transition_logic.jsonl')
 
     with open(output_file, "a") as f:
@@ -164,7 +164,7 @@ def generate_negative_filler_words_transcript_samples(n, model, temperature, max
     Generate `n` long-form samples recursively from GPT-4o-mini with chat history.
     """
 
-    system_prompt = "You are an assistant generating realistic speech transcript variations for training a communication evaluation model."
+    system_prompt = "You are an assistant with a persona who rewrites reference sample for training a communication evaluation model. Do not include any introductory phrases or openings; start directly with the main content."
     output_file = os.path.join(output_folder, 'generated_bad_filler_words.jsonl')
 
     with open(output_file, "a") as f:
@@ -176,7 +176,7 @@ def generate_negative_filler_words_transcript_samples(n, model, temperature, max
                 user_prompt = f"""
                 You are given a reference article-style sample.
 
-                Imitate a rambling thinker who overuses vague expressions and redundant connectors, rewrite the sample in a way that **includes filler words**.
+                Imitate a writer who uses redundant connectors, rewrite the sample in a way that **includes filler words rarely but surely**.
 
                 Only output the transcript content.
 
@@ -218,10 +218,9 @@ if __name__ == "__main__":
     with open(real_sample_path, "r") as f:
         real_samples = [json.loads(l)['text'].strip() for l in f]
 
-    # for trait, prompt in criteria.items():
-    generate_negative_formality_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
-    generate_negative_transition_logic_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
-    generate_negative_persuasion_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
-    generate_negative_filler_words_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    # generate_negative_formality_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    # generate_negative_transition_logic_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    # generate_negative_persuasion_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
+    # generate_negative_filler_words_transcript_samples(num_samples, gpt_model, temperature, max_tokens, real_samples, output_folder)
 
     

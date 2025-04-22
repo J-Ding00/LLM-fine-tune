@@ -9,7 +9,7 @@ raw_transcripts_gen:
     filler words: a rambling writer who uses repetitive, vague phrasing or redundant connectors,
     transition logic: A disorganized writer whose paragraphs jump between ideas without clear transitions or structure
   num_samples: 50
-  output_folder: data/labeled/generated
+  output_folder: data/raw/generated
   temperature: 1
   max_tokens: 1000
 
@@ -20,11 +20,12 @@ webtext_load:
 gpt_data_label:
   max_eval_tokens: 500
   webtext_label_output_file: data/labeled/label_openwebtext_sample.jsonl
-  generated_label_output_file: data/labeled/label_generated_sample.jsonl
+  generated_label_output_folder: data/labeled/generated
 
 pretrain_model:
   model: Qwen/Qwen2.5-0.5B-Instruct
   eval: 
+    input_test_path: data/test/clean_label_all_sample_test.jsonl
     pretrain_output: eval/pretrain_openwebtext_sample.jsonl
     max_eval_tokens: 500
 
@@ -33,9 +34,9 @@ data_process:
   criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
 
 data_split:
-  input: data/labeled/clean_label_openwebtext_sample.jsonl
+  input: data/labeled/clean_label_all_sample.jsonl
   output_dir: data
-  stratified_criteria: [formality, persuasiveness, transition logic]
+  stratified_criteria: [formality, enthusiasm, empathy]
   threshold: 6
   train_ratio: 0.8
   val_ratio: 0.1
@@ -46,10 +47,17 @@ preprocess:
   max_words: 1000
 
 evaluation:
-  jsonl_format_in: [data/labeled/label_openwebtext_sample.jsonl, eval/pretrain_openwebtext_sample.jsonl]
+  # jsonl_format_in: 
+  #   [data/labeled/label_openwebtext_sample.jsonl,
+  #   data/labeled/generated/label_generated_bad_transition_logic.jsonl,
+  #   data/labeled/generated/label_generated_bad_formality.jsonl,
+  #   data/labeled/generated/label_generated_bad_persuasion.jsonl,
+  #   data/labeled/generated/label_generated_bad_filler_words.jsonl]
+  jsonl_format_in: [data/labeled/clean_label_all_sample.jsonl]
   jsonl_generated_data_in: data/labeled/generated
   jsonl_format_out: eval/json_evaluation_metrics.txt
   jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt
   clean_webtext_data_out: data/labeled/clean_label_openwebtext_sample.jsonl
   clean_generated_data_out: data/labeled/clean_label_generated_sample.jsonl
+  clean_data_out: data/labeled/clean_label_all_sample.jsonl
   score_threshold: [5, 6]

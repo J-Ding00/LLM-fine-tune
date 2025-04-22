@@ -99,18 +99,18 @@ if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    # eval_file_list = config['evaluation']['jsonl_format_in']
-    eval_file_list = [os.path.join(config['evaluation']['jsonl_generated_data_in'], f) for f in os.listdir(config['evaluation']['jsonl_generated_data_in'])]
-    print(eval_file_list)
+    eval_file_list = config['evaluation']['jsonl_format_in']
+    # eval_file_list = [os.path.join(config['evaluation']['jsonl_generated_data_in'], f) for f in os.listdir(config['evaluation']['jsonl_generated_data_in'])]
     output_path = config['evaluation']['jsonl_format_out']
     criteria = config['data_process']['criteria']
     score_threshold = config['evaluation']['score_threshold']
 
     with open(output_path, "a") as out:
         for file in eval_file_list:
-            for score in score_threshold:
-                metrics = validate_and_analyze_jsonl(file, criteria, score)
-                out.writelines(metrics)
-                print(f"Finished: {file}")
+            if file.endswith('.jsonl'):
+                for score in score_threshold:
+                    metrics = validate_and_analyze_jsonl(file, criteria, score)
+                    out.writelines(metrics)
+                    print(f"Finished: {file}")
 
     print("All files processed. Metrics written to:", output_path)
