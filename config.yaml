@@ -26,9 +26,11 @@ pretrain_model:
   model: Qwen/Qwen2.5-0.5B-Instruct
   eval: 
     input_test_path: data/test/clean_label_all_sample_test.jsonl
-    pretrain_output: eval/pretrain_openwebtext_sample.jsonl
+    pretrain_output: eval/pretrain_all_sample.jsonl
     max_eval_tokens: 500
 
+fine_tune:
+  output_dir: output
 
 data_process:
   criteria: [formality, persuasiveness, enthusiasm, empathy, filler words, transition logic]
@@ -53,11 +55,11 @@ evaluation:
   #   data/labeled/generated/label_generated_bad_formality.jsonl,
   #   data/labeled/generated/label_generated_bad_persuasion.jsonl,
   #   data/labeled/generated/label_generated_bad_filler_words.jsonl]
-  jsonl_format_in: [data/labeled/clean_label_all_sample.jsonl]
+  jsonl_format_in: [eval/pretrain_all_sample.jsonl, data/test/clean_label_all_sample_test.jsonl]
   jsonl_generated_data_in: data/labeled/generated
   jsonl_format_out: eval/json_evaluation_metrics.txt
   jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt
   clean_webtext_data_out: data/labeled/clean_label_openwebtext_sample.jsonl
   clean_generated_data_out: data/labeled/clean_label_generated_sample.jsonl
   clean_data_out: data/labeled/clean_label_all_sample.jsonl
-  score_threshold: [5, 6]
+  score_threshold: [6]

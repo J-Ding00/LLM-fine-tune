@@ -1,0 +1,150 @@
+from datasets import load_dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForLanguageModeling,
+)
+from peft import get_peft_model, LoraConfig, TaskType
+import yaml
+
+def tokenize_function(example, tokenizer, max_length):
+    prompt_text = tokenizer.apply_chat_template(
+        example["messages"], tokenize=False, add_generation_prompt=True
+    )
+
+    # Create full training text
+    full_text = prompt_text + example["output"]
+    tokenized = tokenizer(
+        full_text,
+        truncation=True,
+        max_length=max_length,
+        padding=False,
+    )
+    tokenized["labels"] = tokenized["input_ids"].copy()
+    return tokenized
+
+def format_for_finetuning(example, criteria, criteria_format):
+    # Create the structured format placeholder
+
+    # Build the instruction
+    instruction = f"""
+    You are an expert speech evaluator. Given a transcript of a speaker's message, assess the communication quality in terms of the following traits:
+    {criteria}
+
+    For each trait, assign a score from 1 (poor) to 10 (excellent). Be honest and critical in your assessment without bias toward high scores. 
+    Then provide a short explanation (1–2 sentences) justifying your score for that trait.
+
+    The final output must be a JSON string with the exact format below:
+    {criteria_format}
+    """.strip()
+
+    transcript = f"Transcript:\n{example['text']}"
+    messages = [
+        {"role": "system", "content": f"{instruction}"},
+        {"role": "user", "content": f"{transcript}"}
+    ]
+
+    return {
+        "messages": messages,
+        "output": example["label"]
+    }
+
+if __name__ == "__main__":
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    model_name = config['pretrain_model']['model']
+    criteria = config['data_process']['criteria']
+    criteria_format = {c: { "score": "<int>", "feedback": "<string>" } for c in criteria}
+    out_dir = config['fine_tune']['output_dir']
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+
+    lora_config = LoraConfig(
+        r=8,
+        lora_alpha=32,
+        target_modules='all-linear',
+        lora_dropout=0.05,
+        bias="none",
+        task_type=TaskType.CAUSAL_LM,
+    )
+    model = get_peft_model(model, lora_config)
+
+    # Load your dataset (e.g., JSONL -> Dataset)
+    raw_dataset = load_dataset("json", data_files="data/train/clean_label_all_sample_train.jsonl")["train"]
+    dataset = raw_dataset.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
+
+    # Tokenize
+    tokenized_dataset = dataset.map(
+        lambda x: tokenize_function(x, tokenizer, max_length=1024),
+        remove_columns=dataset.column_names,
+        batched=False,
+    )
+
+    raw_eval_dataset = load_dataset("json", data_files="data/val/clean_label_all_sample_val.jsonl")["train"]
+
+    formatted_eval = raw_eval_dataset.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
+
+    tokenized_eval = formatted_eval.map(
+        lambda x: tokenize_function(x, tokenizer, max_length=1024),
+        remove_columns=formatted_eval.column_names,
+        batched=False,
+    )
+
+    # Collator
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+
+    # Training args
+    # training_args = TrainingArguments(
+    #     output_dir="./checkpoints/json_stage1",
+    #     num_train_epochs=3,
+    #     per_device_train_batch_size=4,
+    #     gradient_accumulation_steps=4,
+    #     logging_steps=20,
+    #     save_steps=200,
+    #     save_total_limit=2,
+    #     evaluation_strategy="no",
+    #     fp16=True,
+    #     learning_rate=2e-5,
+    #     report_to="none",
+    # )
+    training_args = TrainingArguments(
+        output_dir=out_dir,
+        num_train_epochs=1,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=8,
+        learning_rate=1e-4,
+        logging_steps=5,
+        save_steps=100,
+        save_total_limit=2,
+        warmup_ratio=0.05,
+        fp16=False,
+        bf16=True,
+        # dataloader_num_workers=4,
+        eval_strategy="steps",
+        eval_steps=100,
+        report_to="none",
+    )
+
+    # Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_dataset,
+        eval_dataset=tokenized_eval,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
+    # from torch.utils.data import DataLoader
+    import torch
+    sample = tokenized_eval[0]
+    model.eval()
+    with torch.no_grad():
+        out = model(
+            input_ids=torch.tensor(sample["input_ids"]).unsqueeze(0),
+            attention_mask=torch.tensor(sample["attention_mask"]).unsqueeze(0)
+        )
+    print(out)
+    # trainer.train()

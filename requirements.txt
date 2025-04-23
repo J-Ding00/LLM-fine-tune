@@ -5,6 +5,7 @@ datasets
 scikit-learn
 transformers
 torch
+peft
 
 # model specific
 accelerate

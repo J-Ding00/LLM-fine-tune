@@ -1,12 +1,79 @@
 import json
 import yaml
 import re
+from sklearn.metrics import mean_squared_error
+from collections import defaultdict
+from typing import List
 import os
 
-def json_simple_fix(text):
-    text = re.sub(r',\s*([}\]])', r'\1', text)
-    if text.count('{') > text.count('}'): text += '}'
-    return text
+def compare_score_mse(generated_file, ground_truth_file, traits):
+    """
+    Compare score MSE between model output and ground truth label files.
+
+    Args:
+        generated_file (str): Path to model output .jsonl file (with possibly noisy JSON in 'label').
+        ground_truth_file (str): Path to clean ground truth .jsonl file.
+        traits (List[str]): List of trait names to compare scores for.
+
+    Returns:
+        dict: MSE per trait and overall average MSE.
+    """
+    trait_scores = defaultdict(lambda: {'pred': [], 'gt': []})
+    total_lines = 0
+    valid_lines = 0
+
+    with open(generated_file, 'r') as f_gen, open(ground_truth_file, 'r') as f_gt:
+        for gen_line, gt_line in zip(f_gen, f_gt):
+            total_lines += 1
+            try:
+                gen = json.loads(gen_line)
+                gt = json.loads(gt_line)
+
+                pred_label = json.loads(extract_and_fix_json(gen['label']))
+                gt_label = json.loads(gt['label'])
+
+                for trait in traits:
+                    pred_score = pred_label[trait]["score"]
+                    gt_score = gt_label[trait]["score"]
+                    trait_scores[trait]["pred"].append(pred_score)
+                    trait_scores[trait]["gt"].append(gt_score)
+
+                valid_lines += 1
+            except Exception as e:
+                continue
+
+    results = {}
+    for trait in traits:
+        pred = trait_scores[trait]["pred"]
+        gt = trait_scores[trait]["gt"]
+        if pred and gt:
+            results[trait] = mean_squared_error(gt, pred)
+
+    results["overall_avg_mse"] = sum(results.values()) / len(results) if results else None
+    msg = f"\nMSE Metrics\n\nCompared {valid_lines}/{total_lines} lines successfully.\n"
+    return results, msg
+
+def extract_and_fix_json(text):
+    """
+    Extracts and fixes a JSON block from a text string.
+    - Tries to extract JSON from markdown-style code blocks or brace matching.
+    - Applies simple fixes for trailing commas and missing closing braces.
+    """
+    # Extract from fenced code block
+    match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if not match:
+        # Fallback: extract first curly-braced block
+        match = re.search(r'(\{.*\})', text, re.DOTALL)
+    json_text = match.group(1).strip() if match else text.strip()
+
+    # Fix trailing commas before closing } or ]
+    json_text = re.sub(r',\s*([}\]])', r'\1', json_text)
+
+    # Naively add closing brace if there's a mismatch
+    if json_text.count('{') > json_text.count('}'):
+        json_text += '}'
+
+    return json_text
 
 def is_valid_json_structure(obj, criteria):
     for field in criteria:
@@ -51,7 +118,7 @@ def validate_and_analyze_jsonl(path, criteria, score_threshold):
             label = json.loads(output)
         except json.JSONDecodeError:
             try:
-                fixed = json_simple_fix(output)
+                fixed = extract_and_fix_json(output)
                 label = json.loads(fixed)
             except Exception as e2:
                 invalid_lines.append((idx, f"Unrecoverable JSON decode error: {e2}"))
@@ -112,5 +179,15 @@ if __name__ == "__main__":
                     metrics = validate_and_analyze_jsonl(file, criteria, score)
                     out.writelines(metrics)
                     print(f"Finished: {file}")
+
+        if len(eval_file_list) == 2:
+            mse_scores, msg = compare_score_mse(
+                generated_file=eval_file_list[0],
+                ground_truth_file=eval_file_list[1],
+                traits=criteria
+            )
+            out.write(msg)
+            for trait, mse in mse_scores.items():
+                out.write(f"{trait}: {mse:.4f}\n")
 
     print("All files processed. Metrics written to:", output_path)

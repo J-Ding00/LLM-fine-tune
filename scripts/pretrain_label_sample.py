@@ -51,19 +51,18 @@ def label_batch_local(input_path, output_path, criteria, model, tokenizer, max_n
     with open(output_path, "w") as fout:
         for example in tqdm(lines, desc="Labeling samples"):
             transcript = example["text"]
-            id = example['id']
             try:
                 feedback = generate_local_feedback(model, tokenizer, transcript, criteria, criteria_format, max_new_tokens)
-                labeled = {"id": id, "text": transcript, "label": feedback}
+                labeled = {"text": transcript, "label": feedback}
                 fout.write(json.dumps(labeled, ensure_ascii=False) + "\n")
             except Exception as e:
-                print(f"[Error] Skipping sample {id}: {e}")
+                print(f"[Error] Skipping sample")
 
 if __name__ == "__main__":
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
-    input_file = config['webtext_load']['raw_output_file']
+    input_file = config['pretrain_model']['eval']['input_test_path']
     output_file = config['pretrain_model']['eval']['pretrain_output']
     criteria = config["data_process"]["criteria"]
     max_new_tokens = config['pretrain_model']['eval']["max_eval_tokens"]
