@@ -55,7 +55,7 @@ evaluation:
   #   data/labeled/generated/label_generated_bad_formality.jsonl,
   #   data/labeled/generated/label_generated_bad_persuasion.jsonl,
   #   data/labeled/generated/label_generated_bad_filler_words.jsonl]
-  jsonl_format_in: [eval/pretrain_all_sample.jsonl, data/test/clean_label_all_sample_test.jsonl]
+  jsonl_format_in: [predictions/fine_tune_pred_epoch1, data/test/clean_label_all_sample_test.jsonl]
   jsonl_generated_data_in: data/labeled/generated
   jsonl_format_out: eval/json_evaluation_metrics.txt
   jsonl_generated_data_out: eval/json_generated_evaluation_metrics.txt

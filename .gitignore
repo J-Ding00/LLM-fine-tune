@@ -13,3 +13,9 @@ venv/
 data/
 eval/*.txt
 eval/*.jsonl
+
+# Model
+output/
+
+# Predict
+predictions/

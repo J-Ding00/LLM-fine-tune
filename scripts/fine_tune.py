@@ -9,7 +9,7 @@ from transformers import (
 import yaml
 import os
 from peft import get_peft_model, LoraConfig, TaskType, PeftModel
-from scripts.pretrain_label_sample import label_batch_local
+from pretrain_label_sample import label_batch_local
 
 
 def tokenize_function(example, tokenizer, max_length):
@@ -23,7 +23,7 @@ def tokenize_function(example, tokenizer, max_length):
         full_text,
         truncation=True,
         max_length=max_length,
-        padding=False,
+        padding='max_length',
     )
     prompt_tokenized = tokenizer(prompt_text, truncation=True, max_length=max_length, padding=False)
     prompt_len = len(prompt_tokenized["input_ids"])
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     # Tokenize
     tokenized_dataset = dataset.map(
-        lambda x: tokenize_function(x, tokenizer, max_length=1024),
+        lambda x: tokenize_function(x, tokenizer, max_length=768),
         remove_columns=dataset.column_names,
         batched=False,
     )
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     formatted_eval = raw_eval_dataset.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
 
     tokenized_eval = formatted_eval.map(
-        lambda x: tokenize_function(x, tokenizer, max_length=1024),
+        lambda x: tokenize_function(x, tokenizer, max_length=768),
         remove_columns=formatted_eval.column_names,
         batched=False,
     )
@@ -125,18 +125,18 @@ if __name__ == "__main__":
         output_dir=out_dir,
         num_train_epochs=1,
         per_device_train_batch_size=1,
-        gradient_accumulation_steps=8,
+        gradient_accumulation_steps=1,
         learning_rate=1e-4,
-        logging_steps=5,
+        logging_steps=240,
         save_strategy='epoch',
-        save_total_limit=2,
+        save_total_limit=3,
         warmup_ratio=0.05,
         fp16=False,
         bf16=True,
         dataloader_num_workers=4,
         prediction_loss_only=True,
         eval_strategy="steps",
-        eval_steps=100,
+        eval_steps=240,
         report_to="none",
     )
 
@@ -150,16 +150,22 @@ if __name__ == "__main__":
         data_collator=data_collator,
     )
     
-    trainer.train()
+    import torch
+    import gc
+    torch.cuda.empty_cache()
+    gc.collect()
+    # trainer.train()
 
-    # Load test set
-    test_raw = load_dataset("json", data_files="data/test/clean_label_all_sample_test.jsonl")["train"]
-    test_formatted = test_raw.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
-    test_tokenized = test_formatted.map(lambda x: tokenize_function(x, tokenizer, max_length=1024))
+    # # Load test set
+    # test_raw = load_dataset("json", data_files="data/test/clean_label_all_sample_test.jsonl")["train"]
+    # test_formatted = test_raw.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
+    # test_tokenized = test_formatted.map(lambda x: tokenize_function(x, tokenizer, max_length=1024))
 
-    folders = [f for f in os.listdir(out_dir) if f.startswith("checkpoint") and os.path.isdir(f)]
+    folders = [f for f in os.listdir(out_dir) if f.startswith("checkpoint") and os.path.isdir(os.path.join(out_dir, f))]
     base_model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
     os.makedirs('predictions', exist_ok=True)
     for i, f in enumerate(folders):
         peft_model = PeftModel.from_pretrained(base_model, os.path.join(out_dir, f))
+        torch.cuda.empty_cache()
+        gc.collect()
         label_batch_local("data/test/clean_label_all_sample_test.jsonl", f'predictions/fine_tune_pred_epoch{i+1}', criteria, peft_model, tokenizer, max_new_tokens)
