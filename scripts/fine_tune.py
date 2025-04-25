@@ -6,8 +6,11 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling,
 )
-from peft import get_peft_model, LoraConfig, TaskType
 import yaml
+import os
+from peft import get_peft_model, LoraConfig, TaskType, PeftModel
+from scripts.pretrain_label_sample import label_batch_local
+
 
 def tokenize_function(example, tokenizer, max_length):
     prompt_text = tokenizer.apply_chat_template(
@@ -22,7 +25,14 @@ def tokenize_function(example, tokenizer, max_length):
         max_length=max_length,
         padding=False,
     )
-    tokenized["labels"] = tokenized["input_ids"].copy()
+    prompt_tokenized = tokenizer(prompt_text, truncation=True, max_length=max_length, padding=False)
+    prompt_len = len(prompt_tokenized["input_ids"])
+
+    # Mask labels before the output
+    labels = tokenized["input_ids"].copy()
+    labels[:prompt_len] = [-100] * prompt_len
+    tokenized["labels"] = labels
+
     return tokenized
 
 def format_for_finetuning(example, criteria, criteria_format):
@@ -61,6 +71,7 @@ if __name__ == "__main__":
     out_dir = config['fine_tune']['output_dir']
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    max_new_tokens = config['pretrain_model']['eval']["max_eval_tokens"]
 
     lora_config = LoraConfig(
         r=8,
@@ -117,12 +128,13 @@ if __name__ == "__main__":
         gradient_accumulation_steps=8,
         learning_rate=1e-4,
         logging_steps=5,
-        save_steps=100,
+        save_strategy='epoch',
         save_total_limit=2,
         warmup_ratio=0.05,
         fp16=False,
         bf16=True,
-        # dataloader_num_workers=4,
+        dataloader_num_workers=4,
+        prediction_loss_only=True,
         eval_strategy="steps",
         eval_steps=100,
         report_to="none",
@@ -137,14 +149,17 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
-    # from torch.utils.data import DataLoader
-    import torch
-    sample = tokenized_eval[0]
-    model.eval()
-    with torch.no_grad():
-        out = model(
-            input_ids=torch.tensor(sample["input_ids"]).unsqueeze(0),
-            attention_mask=torch.tensor(sample["attention_mask"]).unsqueeze(0)
-        )
-    print(out)
-    # trainer.train()
+    
+    trainer.train()
+
+    # Load test set
+    test_raw = load_dataset("json", data_files="data/test/clean_label_all_sample_test.jsonl")["train"]
+    test_formatted = test_raw.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
+    test_tokenized = test_formatted.map(lambda x: tokenize_function(x, tokenizer, max_length=1024))
+
+    folders = [f for f in os.listdir(out_dir) if f.startswith("checkpoint") and os.path.isdir(f)]
+    base_model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    os.makedirs('predictions', exist_ok=True)
+    for i, f in enumerate(folders):
+        peft_model = PeftModel.from_pretrained(base_model, os.path.join(out_dir, f))
+        label_batch_local("data/test/clean_label_all_sample_test.jsonl", f'predictions/fine_tune_pred_epoch{i+1}', criteria, peft_model, tokenizer, max_new_tokens)
