@@ -1,13 +1,18 @@
 from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
+    BitsAndBytesConfig,
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
     DataCollatorForLanguageModeling,
 )
+from transformers.tokenization_utils_base import TruncationStrategy
+import wandb
 import yaml
 import os
+import torch
+from dotenv import load_dotenv
 from peft import get_peft_model, LoraConfig, TaskType, PeftModel
 from pretrain_label_sample import label_batch_local
 
@@ -69,8 +74,7 @@ if __name__ == "__main__":
     criteria = config['data_process']['criteria']
     criteria_format = {c: { "score": "<int>", "feedback": "<string>" } for c in criteria}
     out_dir = config['fine_tune']['output_dir']
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     max_new_tokens = config['pretrain_model']['eval']["max_eval_tokens"]
 
     lora_config = LoraConfig(
@@ -81,6 +85,12 @@ if __name__ == "__main__":
         bias="none",
         task_type=TaskType.CAUSAL_LM,
     )
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto", quantization_config=quantization_config)
     model = get_peft_model(model, lora_config)
 
     # Load your dataset (e.g., JSONL -> Dataset)
@@ -89,7 +99,7 @@ if __name__ == "__main__":
 
     # Tokenize
     tokenized_dataset = dataset.map(
-        lambda x: tokenize_function(x, tokenizer, max_length=768),
+        lambda x: tokenize_function(x, tokenizer, max_length=1024),
         remove_columns=dataset.column_names,
         batched=False,
     )
@@ -99,7 +109,7 @@ if __name__ == "__main__":
     formatted_eval = raw_eval_dataset.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
 
     tokenized_eval = formatted_eval.map(
-        lambda x: tokenize_function(x, tokenizer, max_length=768),
+        lambda x: tokenize_function(x, tokenizer, max_length=1024),
         remove_columns=formatted_eval.column_names,
         batched=False,
     )
@@ -121,13 +131,29 @@ if __name__ == "__main__":
     #     learning_rate=2e-5,
     #     report_to="none",
     # )
+
+    load_dotenv()
+
+    WANDB_API_KEY = os.getenv("WANDB_API_KEY")
+    wandb.login(key=WANDB_API_KEY)
+    run = wandb.init(
+        project="LLM-fine-tune",
+        name="qlora-qwen-finetune",
+        # Track hyperparameters and run metadata.
+        # config={
+        #     "learning_rate": 0.02,
+        #     "architecture": "CNN",
+        #     "dataset": "CIFAR-100",
+        #     "epochs": 3,
+        # },
+    )
     training_args = TrainingArguments(
         output_dir=out_dir,
-        num_train_epochs=1,
+        num_train_epochs=3,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=1,
         learning_rate=1e-4,
-        logging_steps=240,
+        logging_steps=20,
         save_strategy='epoch',
         save_total_limit=3,
         warmup_ratio=0.05,
@@ -136,8 +162,9 @@ if __name__ == "__main__":
         dataloader_num_workers=4,
         prediction_loss_only=True,
         eval_strategy="steps",
-        eval_steps=240,
-        report_to="none",
+        eval_steps=120,
+        report_to="wandb",
+        run_name="qlora-qwen-finetune",
     )
 
     # Trainer
@@ -149,17 +176,13 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
-    
+
+
     import torch
     import gc
     torch.cuda.empty_cache()
     gc.collect()
-    # trainer.train()
-
-    # # Load test set
-    # test_raw = load_dataset("json", data_files="data/test/clean_label_all_sample_test.jsonl")["train"]
-    # test_formatted = test_raw.map(lambda x: format_for_finetuning(x, criteria, criteria_format))
-    # test_tokenized = test_formatted.map(lambda x: tokenize_function(x, tokenizer, max_length=1024))
+    trainer.train()
 
     folders = [f for f in os.listdir(out_dir) if f.startswith("checkpoint") and os.path.isdir(os.path.join(out_dir, f))]
     base_model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
@@ -168,4 +191,4 @@ if __name__ == "__main__":
         peft_model = PeftModel.from_pretrained(base_model, os.path.join(out_dir, f))
         torch.cuda.empty_cache()
         gc.collect()
-        label_batch_local("data/test/clean_label_all_sample_test.jsonl", f'predictions/fine_tune_pred_epoch{i+1}', criteria, peft_model, tokenizer, max_new_tokens)
+        label_batch_local("data/test/clean_label_all_sample_test.jsonl", f'predictions/fine_tune_pred_epoch{i+1}.jsonl', criteria, peft_model, tokenizer, max_new_tokens)

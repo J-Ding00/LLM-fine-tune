@@ -1,6 +1,7 @@
 import json
 import yaml
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
 from tqdm import tqdm
 
 def build_prompt(text, criteria, criteria_format):
@@ -67,13 +68,27 @@ if __name__ == "__main__":
     criteria = config["data_process"]["criteria"]
     max_new_tokens = config['pretrain_model']['eval']["max_eval_tokens"]
     model_name = config["pretrain_model"]["model"]
+    quantized = config['pretrain_model']['quantization']
 
+    if quantized:
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype="auto",
+            quantization_config=quantization_config,
+            device_map="auto"
+        )
+        output_file = output_file[:-6] + '_quantized.jsonl'
+    else:
     # Load model and tokenizer
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype="auto",
-        device_map="auto"
-    )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype="auto",
+            device_map="auto"
+        )
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     label_batch_local(input_file, output_file, criteria, model, tokenizer, max_new_tokens)

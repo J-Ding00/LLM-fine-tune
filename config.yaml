@@ -24,6 +24,7 @@ gpt_data_label:
 
 pretrain_model:
   model: Qwen/Qwen2.5-0.5B-Instruct
+  quantization: True
   eval: 
     input_test_path: data/test/clean_label_all_sample_test.jsonl
     pretrain_output: eval/pretrain_all_sample.jsonl

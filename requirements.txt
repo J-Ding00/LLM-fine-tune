@@ -6,6 +6,8 @@ scikit-learn
 transformers
 torch
 peft
+bitsandbytes
+wandb
 
 # model specific
 accelerate
