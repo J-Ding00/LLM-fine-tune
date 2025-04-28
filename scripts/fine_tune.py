@@ -7,7 +7,6 @@ from transformers import (
     Trainer,
     DataCollatorForLanguageModeling,
 )
-from transformers.tokenization_utils_base import TruncationStrategy
 import wandb
 import yaml
 import os
@@ -87,9 +86,11 @@ if __name__ == "__main__":
     )
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
     )
 
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto", quantization_config=quantization_config)
     model = get_peft_model(model, lora_config)
 
@@ -117,21 +118,6 @@ if __name__ == "__main__":
     # Collator
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    # Training args
-    # training_args = TrainingArguments(
-    #     output_dir="./checkpoints/json_stage1",
-    #     num_train_epochs=3,
-    #     per_device_train_batch_size=4,
-    #     gradient_accumulation_steps=4,
-    #     logging_steps=20,
-    #     save_steps=200,
-    #     save_total_limit=2,
-    #     evaluation_strategy="no",
-    #     fp16=True,
-    #     learning_rate=2e-5,
-    #     report_to="none",
-    # )
-
     load_dotenv()
 
     WANDB_API_KEY = os.getenv("WANDB_API_KEY")
@@ -139,13 +125,6 @@ if __name__ == "__main__":
     run = wandb.init(
         project="LLM-fine-tune",
         name="qlora-qwen-finetune",
-        # Track hyperparameters and run metadata.
-        # config={
-        #     "learning_rate": 0.02,
-        #     "architecture": "CNN",
-        #     "dataset": "CIFAR-100",
-        #     "epochs": 3,
-        # },
     )
     training_args = TrainingArguments(
         output_dir=out_dir,
@@ -157,8 +136,8 @@ if __name__ == "__main__":
         save_strategy='epoch',
         save_total_limit=3,
         warmup_ratio=0.05,
-        fp16=False,
-        bf16=True,
+        fp16=True,
+        bf16=False,
         dataloader_num_workers=4,
         prediction_loss_only=True,
         eval_strategy="steps",
@@ -185,9 +164,9 @@ if __name__ == "__main__":
     trainer.train()
 
     folders = [f for f in os.listdir(out_dir) if f.startswith("checkpoint") and os.path.isdir(os.path.join(out_dir, f))]
-    base_model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
     os.makedirs('predictions', exist_ok=True)
-    for i, f in enumerate(folders):
+    for i, f in enumerate(folders, start=1):
+        base_model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto", quantization_config=quantization_config)
         peft_model = PeftModel.from_pretrained(base_model, os.path.join(out_dir, f))
         torch.cuda.empty_cache()
         gc.collect()
