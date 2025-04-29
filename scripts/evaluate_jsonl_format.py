@@ -3,54 +3,92 @@ import yaml
 import re
 from sklearn.metrics import mean_squared_error
 from collections import defaultdict
-from typing import List
 import os
 
-def compare_score_mse(generated_file, ground_truth_file, traits):
+def compare_multiple_score_mse(generated_files, ground_truth_file, traits):
     """
-    Compare score MSE between model output and ground truth label files.
+    Compare score MSE between multiple model output files and ground truth label file.
+    Only lines that are valid across all generated files are included.
 
     Args:
-        generated_file (str): Path to model output .jsonl file (with possibly noisy JSON in 'label').
+        generated_files (List[str]): List of paths to model output .jsonl files.
         ground_truth_file (str): Path to clean ground truth .jsonl file.
         traits (List[str]): List of trait names to compare scores for.
 
     Returns:
-        dict: MSE per trait and overall average MSE.
+        dict: {generated_file: {trait: MSE, ..., "overall_avg_mse": avg MSE}} for each generated file
+        str: Summary message
     """
-    trait_scores = defaultdict(lambda: {'pred': [], 'gt': []})
+    # One trait_scores per generated file
+    all_trait_scores = {gen_file: defaultdict(lambda: {'pred': [], 'gt': []}) for gen_file in generated_files}
+
     total_lines = 0
     valid_lines = 0
 
-    with open(generated_file, 'r') as f_gen, open(ground_truth_file, 'r') as f_gt:
-        for gen_line, gt_line in zip(f_gen, f_gt):
-            total_lines += 1
-            try:
-                gen = json.loads(gen_line)
-                gt = json.loads(gt_line)
+    # Open all generated files and ground truth file
+    file_handlers = [open(f, 'r') for f in generated_files]
+    gt_handler = open(ground_truth_file, 'r')
 
-                pred_label = json.loads(extract_and_fix_json(gen['label']))
+    try:
+        for lines in zip(*file_handlers, gt_handler):
+            total_lines += 1
+            gen_lines = lines[:-1]
+            gt_line = lines[-1]
+
+            try:
+                gt = json.loads(gt_line)
                 gt_label = json.loads(gt['label'])
 
-                for trait in traits:
-                    pred_score = pred_label[trait]["score"]
-                    gt_score = gt_label[trait]["score"]
-                    trait_scores[trait]["pred"].append(pred_score)
-                    trait_scores[trait]["gt"].append(gt_score)
+                pred_labels = []
+                all_valid = True
+                
+                for gen_line in gen_lines:
+                    gen = json.loads(gen_line)
+                    pred_label = json.loads(extract_and_fix_json(gen['label']))
+                    valid, _ = is_valid_json_structure(pred_label, traits)
+                    if not valid:
+                        all_valid = False
+                        break
+                    pred_labels.append(pred_label)
 
-                valid_lines += 1
+                if all_valid:
+                    for gen_file, pred_label in zip(generated_files, pred_labels):
+                        for trait in traits:
+                            pred_score = int(pred_label[trait]["score"])
+                            gt_score = int(gt_label[trait]["score"])
+                            all_trait_scores[gen_file][trait]["pred"].append(pred_score)
+                            all_trait_scores[gen_file][trait]["gt"].append(gt_score)
+                    valid_lines += 1
+
             except Exception as e:
                 continue
 
+    finally:
+        for f in file_handlers:
+            f.close()
+        gt_handler.close()
     results = {}
-    for trait in traits:
-        pred = trait_scores[trait]["pred"]
-        gt = trait_scores[trait]["gt"]
-        if pred and gt:
-            results[trait] = mean_squared_error(gt, pred)
+    for gen_file in generated_files:
+        trait_results = {}
+        for trait in traits:
+            pred = all_trait_scores[gen_file][trait]["pred"]
+            gt = all_trait_scores[gen_file][trait]["gt"]
+            if pred and gt:
+                trait_results[trait] = mean_squared_error(gt, pred)
+        if trait_results:
+            trait_results["overall_avg_mse"] = sum(trait_results.values()) / len(trait_results)
+        else:
+            trait_results["overall_avg_mse"] = None
+        results[gen_file] = trait_results
+    # Pretty print summary
+    msg = "\nMSE Metrics across generated files:\n\n"
+    for gen_file, trait_mses in results.items():
+        msg += f"Generated File: {gen_file}\n"
+        for trait, mse in trait_mses.items():
+            msg += f"  {trait}: {mse:.4f}\n"
+        msg += "\n"
 
-    results["overall_avg_mse"] = sum(results.values()) / len(results) if results else None
-    msg = f"\nMSE Metrics\n\nCompared {valid_lines}/{total_lines} lines successfully.\n"
+    msg += f"Compared {valid_lines}/{total_lines} lines successfully (only counting lines valid in all files).\n"
     return results, msg
 
 def extract_and_fix_json(text):
@@ -84,10 +122,11 @@ def is_valid_json_structure(obj, criteria):
             return False, f"Field '{field}' is not a dict"
         if "score" not in trait or "feedback" not in trait:
             return False, f"Field '{field}' missing 'score' or 'feedback'"
-        if not isinstance(trait["score"], int):
+        try:   
+            if int(trait["score"]) < 1 or int(trait["score"]) > 10:
+                return False, f"Score in '{field}' outside range"
+        except Exception as e:
             return False, f"Score in '{field}' is not int"
-        if trait["score"] < 1 or trait["score"] > 10:
-            return False, f"Score in '{field}' outside range"
         if not isinstance(trait["feedback"], str):
             return False, f"Feedback in '{field}' is not str"
     return True, None
@@ -131,7 +170,7 @@ def validate_and_analyze_jsonl(path, criteria, score_threshold):
 
         valid += 1
         for trait in criteria:
-            score = label[trait]["score"]
+            score = int(label[trait]["score"])
             trait_stats[trait]["scores"].append(score)
             trait_stats[trait]["sum"] += score
             trait_stats[trait]["total"] += 1
@@ -171,6 +210,7 @@ if __name__ == "__main__":
     output_path = config['evaluation']['jsonl_format_out']
     criteria = config['data_process']['criteria']
     score_threshold = config['evaluation']['score_threshold']
+    mse = config['evaluation']['mse']
 
     with open(output_path, "a") as out:
         for file in eval_file_list:
@@ -180,14 +220,12 @@ if __name__ == "__main__":
                     out.writelines(metrics)
                     print(f"Finished: {file}")
 
-        if len(eval_file_list) == 2:
-            mse_scores, msg = compare_score_mse(
-                generated_file=eval_file_list[0],
-                ground_truth_file=eval_file_list[1],
+        if mse and len(eval_file_list) > 1:
+            mse_scores, msg = compare_multiple_score_mse(
+                generated_files=eval_file_list[:-1],
+                ground_truth_file=eval_file_list[-1],
                 traits=criteria
             )
             out.write(msg)
-            for trait, mse in mse_scores.items():
-                out.write(f"{trait}: {mse:.4f}\n")
 
     print("All files processed. Metrics written to:", output_path)

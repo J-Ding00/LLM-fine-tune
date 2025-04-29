@@ -1,0 +1,265 @@
+# MSE comparison between quantized pretrained model and 3 fine-tuned checkpoints, evaluated on the same subset of valid, parsable test samples, against ground truth labels.
+# Detailed MSE comparisons are provided at the end of file.
+
+# Quantized pretrained model
+eval/pretrain_all_sample_quantized.jsonl check with score threshold 6:
+Valid samples: 69/120
+Invalid samples: 51
+
+Sample errors (up to 10 shown):
+  Line 4: Unrecoverable JSON decode error: Extra data: line 1 column 291 (char 290)
+  Line 5: Unrecoverable JSON decode error: Invalid control character at: line 20 column 91 (char 717)
+  Line 8: Score in 'filler words' outside range
+  Line 9: Unrecoverable JSON decode error: Invalid control character at: line 20 column 74 (char 908)
+  Line 10: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 11: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 14: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 17: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 18: Score in 'filler words' outside range
+  Line 19: Score in 'enthusiasm' outside range
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 7.80
+  >6: 63 | <=6: 6
+  Min: 1, Max: 10
+
+Trait: persuasiveness
+  Avg Score: 8.49
+  >6: 67 | <=6: 2
+  Min: 5, Max: 10
+
+Trait: enthusiasm
+  Avg Score: 7.71
+  >6: 59 | <=6: 10
+  Min: 5, Max: 10
+
+Trait: empathy
+  Avg Score: 7.10
+  >6: 38 | <=6: 31
+  Min: 3, Max: 10
+
+Trait: filler words
+  Avg Score: 6.78
+  >6: 38 | <=6: 31
+  Min: 3, Max: 10
+
+Trait: transition logic
+  Avg Score: 8.93
+  >6: 62 | <=6: 7
+  Min: 3, Max: 10
+
+
+
+# Quantized fine-tuned model after epoch 1
+predictions/fine_tune_pred_epoch1.jsonl check with score threshold 6:
+Valid samples: 114/120
+Invalid samples: 6
+
+Sample errors (up to 10 shown):
+  Line 47: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 49: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 79: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 80: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 83: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 113: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 7.19
+  >6: 92 | <=6: 22
+  Min: 4, Max: 8
+
+Trait: persuasiveness
+  Avg Score: 6.30
+  >6: 44 | <=6: 70
+  Min: 4, Max: 8
+
+Trait: enthusiasm
+  Avg Score: 5.00
+  >6: 7 | <=6: 107
+  Min: 3, Max: 9
+
+Trait: empathy
+  Avg Score: 5.12
+  >6: 15 | <=6: 99
+  Min: 3, Max: 8
+
+Trait: filler words
+  Avg Score: 8.65
+  >6: 112 | <=6: 2
+  Min: 5, Max: 9
+
+Trait: transition logic
+  Avg Score: 6.29
+  >6: 47 | <=6: 67
+  Min: 4, Max: 8
+
+
+
+# Quantized fine-tuned model after epoch 2
+predictions/fine_tune_pred_epoch2.jsonl check with score threshold 6:
+Valid samples: 119/120
+Invalid samples: 1
+
+Sample errors (up to 10 shown):
+  Line 83: Unrecoverable JSON decode error: Expecting ',' delimiter: line 4 column 156 (char 196)
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 6.77
+  >6: 60 | <=6: 59
+  Min: 4, Max: 8
+
+Trait: persuasiveness
+  Avg Score: 6.67
+  >6: 82 | <=6: 37
+  Min: 5, Max: 9
+
+Trait: enthusiasm
+  Avg Score: 5.62
+  >6: 32 | <=6: 87
+  Min: 3, Max: 9
+
+Trait: empathy
+  Avg Score: 5.69
+  >6: 27 | <=6: 92
+  Min: 3, Max: 9
+
+Trait: filler words
+  Avg Score: 8.59
+  >6: 115 | <=6: 4
+  Min: 3, Max: 9
+
+Trait: transition logic
+  Avg Score: 6.39
+  >6: 62 | <=6: 57
+  Min: 4, Max: 8
+
+
+
+# Quantized fine-tuned model after epoch 3
+predictions/fine_tune_pred_epoch3.jsonl check with score threshold 6:
+Valid samples: 119/120
+Invalid samples: 1
+
+Sample errors (up to 10 shown):
+  Line 109: Unrecoverable JSON decode error: Expecting ',' delimiter: line 88 column 10 (char 2600)
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 6.97
+  >6: 78 | <=6: 41
+  Min: 4, Max: 8
+
+Trait: persuasiveness
+  Avg Score: 6.64
+  >6: 73 | <=6: 46
+  Min: 4, Max: 9
+
+Trait: enthusiasm
+  Avg Score: 5.60
+  >6: 29 | <=6: 90
+  Min: 3, Max: 9
+
+Trait: empathy
+  Avg Score: 5.33
+  >6: 15 | <=6: 104
+  Min: 3, Max: 9
+
+Trait: filler words
+  Avg Score: 8.60
+  >6: 114 | <=6: 5
+  Min: 3, Max: 9
+
+Trait: transition logic
+  Avg Score: 6.40
+  >6: 65 | <=6: 54
+  Min: 4, Max: 8
+
+
+
+# Ground truth labels
+data/test/clean_label_all_sample_test.jsonl check with score threshold 6:
+Valid samples: 120/120
+Invalid samples: 0
+
+Sample errors (up to 10 shown):
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 6.90
+  >6: 84 | <=6: 36
+  Min: 4, Max: 9
+
+Trait: persuasiveness
+  Avg Score: 6.53
+  >6: 64 | <=6: 56
+  Min: 3, Max: 9
+
+Trait: enthusiasm
+  Avg Score: 5.62
+  >6: 30 | <=6: 90
+  Min: 2, Max: 9
+
+Trait: empathy
+  Avg Score: 5.61
+  >6: 30 | <=6: 90
+  Min: 3, Max: 10
+
+Trait: filler words
+  Avg Score: 8.36
+  >6: 109 | <=6: 11
+  Min: 2, Max: 10
+
+Trait: transition logic
+  Avg Score: 6.45
+  >6: 63 | <=6: 57
+  Min: 3, Max: 8
+
+
+
+MSE Metrics across generated files:
+
+Generated File: eval/pretrain_all_sample_quantized.jsonl
+  formality: 4.9403
+  persuasiveness: 6.9403
+  enthusiasm: 8.5075
+  empathy: 8.4925
+  filler words: 11.0149
+  transition logic: 10.9701
+  overall_avg_mse: 8.4776
+
+Generated File: predictions/fine_tune_pred_epoch1.jsonl
+  formality: 3.1045
+  persuasiveness: 1.5075
+  enthusiasm: 2.1642
+  empathy: 3.1493
+  filler words: 3.0746
+  transition logic: 1.2836
+  overall_avg_mse: 2.3806
+
+Generated File: predictions/fine_tune_pred_epoch2.jsonl
+  formality: 2.4925
+  persuasiveness: 1.9851
+  enthusiasm: 1.9104
+  empathy: 4.3284
+  filler words: 4.1642
+  transition logic: 1.4179
+  overall_avg_mse: 2.7164
+
+Generated File: predictions/fine_tune_pred_epoch3.jsonl
+  formality: 2.0746
+  persuasiveness: 1.7015
+  enthusiasm: 1.5821
+  empathy: 2.1940
+  filler words: 3.6866
+  transition logic: 1.0448
+  overall_avg_mse: 2.0473
+
+Compared 67/120 lines successfully (only counting lines valid in all files).

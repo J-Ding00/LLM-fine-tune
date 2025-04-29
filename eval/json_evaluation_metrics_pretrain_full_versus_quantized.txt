@@ -1,0 +1,166 @@
+# Evaluation of full vs quantized pretrained model outputs using score threshold statistics and MSE metrics, compared against ground truth labels.
+# Detailed MSE comparisons are provided at the end of file.
+
+# Full model
+eval/pretrain_all_sample.jsonl check with score threshold 6:
+Valid samples: 111/120
+Invalid samples: 9
+
+Sample errors (up to 10 shown):
+  Line 24: Unrecoverable JSON decode error: Invalid control character at: line 20 column 80 (char 642)
+  Line 32: Unrecoverable JSON decode error: Invalid control character at: line 20 column 91 (char 676)
+  Line 33: Unrecoverable JSON decode error: Expecting ',' delimiter: line 20 column 74 (char 726)
+  Line 41: Unrecoverable JSON decode error: Expecting ',' delimiter: line 20 column 64 (char 719)
+  Line 46: Unrecoverable JSON decode error: Invalid control character at: line 20 column 81 (char 712)
+  Line 73: Unrecoverable JSON decode error: Expecting ',' delimiter: line 20 column 171 (char 1004)
+  Line 83: Unrecoverable JSON decode error: Expecting ',' delimiter: line 8 column 90 (char 294)
+  Line 87: Unrecoverable JSON decode error: Invalid control character at: line 12 column 181 (char 505)
+  Line 97: Unrecoverable JSON decode error: Expecting ',' delimiter: line 20 column 55 (char 982)
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 8.15
+  >6: 108 | <=6: 3
+  Min: 5, Max: 9
+
+Trait: persuasiveness
+  Avg Score: 8.23
+  >6: 103 | <=6: 8
+  Min: 5, Max: 9
+
+Trait: enthusiasm
+  Avg Score: 7.01
+  >6: 82 | <=6: 29
+  Min: 4, Max: 9
+
+Trait: empathy
+  Avg Score: 6.12
+  >6: 32 | <=6: 79
+  Min: 3, Max: 9
+
+Trait: filler words
+  Avg Score: 4.72
+  >6: 11 | <=6: 100
+  Min: 2, Max: 9
+
+Trait: transition logic
+  Avg Score: 6.72
+  >6: 73 | <=6: 38
+  Min: 3, Max: 9
+
+
+
+# Quantized model
+eval/pretrain_all_sample_quantized.jsonl check with score threshold 6:
+Valid samples: 69/120
+Invalid samples: 51
+
+Sample errors (up to 10 shown):
+  Line 4: Unrecoverable JSON decode error: Extra data: line 1 column 291 (char 290)
+  Line 5: Unrecoverable JSON decode error: Invalid control character at: line 20 column 91 (char 717)
+  Line 8: Score in 'filler words' outside range
+  Line 9: Unrecoverable JSON decode error: Invalid control character at: line 20 column 74 (char 908)
+  Line 10: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 11: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 14: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 17: Unrecoverable JSON decode error: Expecting value: line 1 column 1 (char 0)
+  Line 18: Score in 'filler words' outside range
+  Line 19: Score in 'enthusiasm' outside range
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 7.80
+  >6: 63 | <=6: 6
+  Min: 1, Max: 10
+
+Trait: persuasiveness
+  Avg Score: 8.49
+  >6: 67 | <=6: 2
+  Min: 5, Max: 10
+
+Trait: enthusiasm
+  Avg Score: 7.71
+  >6: 59 | <=6: 10
+  Min: 5, Max: 10
+
+Trait: empathy
+  Avg Score: 7.10
+  >6: 38 | <=6: 31
+  Min: 3, Max: 10
+
+Trait: filler words
+  Avg Score: 6.78
+  >6: 38 | <=6: 31
+  Min: 3, Max: 10
+
+Trait: transition logic
+  Avg Score: 8.93
+  >6: 62 | <=6: 7
+  Min: 3, Max: 10
+
+
+
+# Ground truth labels
+data/test/clean_label_all_sample_test.jsonl check with score threshold 6:
+Valid samples: 120/120
+Invalid samples: 0
+
+Sample errors (up to 10 shown):
+
+Scoring summary:
+
+Trait: formality
+  Avg Score: 6.90
+  >6: 84 | <=6: 36
+  Min: 4, Max: 9
+
+Trait: persuasiveness
+  Avg Score: 6.53
+  >6: 64 | <=6: 56
+  Min: 3, Max: 9
+
+Trait: enthusiasm
+  Avg Score: 5.62
+  >6: 30 | <=6: 90
+  Min: 2, Max: 9
+
+Trait: empathy
+  Avg Score: 5.61
+  >6: 30 | <=6: 90
+  Min: 3, Max: 10
+
+Trait: filler words
+  Avg Score: 8.36
+  >6: 109 | <=6: 11
+  Min: 2, Max: 10
+
+Trait: transition logic
+  Avg Score: 6.45
+  >6: 63 | <=6: 57
+  Min: 3, Max: 8
+
+
+
+MSE Metrics across generated files:
+
+Generated File: eval/pretrain_all_sample.jsonl
+  formality: 4.0161
+  persuasiveness: 6.2097
+  enthusiasm: 4.8871
+  empathy: 4.9677
+  filler words: 19.2258
+  transition logic: 4.2581
+  overall_avg_mse: 7.2608
+
+Generated File: eval/pretrain_all_sample_quantized.jsonl
+  formality: 5.0000
+  persuasiveness: 7.1935
+  enthusiasm: 8.0645
+  empathy: 8.8065
+  filler words: 10.1129
+  transition logic: 11.2903
+  overall_avg_mse: 8.4113
+
+Compared 62/120 lines successfully (only counting lines valid in all files).
