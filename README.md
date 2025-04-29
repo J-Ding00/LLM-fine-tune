@@ -6,6 +6,7 @@ This project fine-tunes a 0.5B parameter language model to generate **structured
 - **Data Augmentation**: Minority trait samples synthetically generated using GPT-4o-mini
 - **Labeling**: Ground truth labels generated using GPT-4o-mini
 - **Model**: QLoRA (4-bit quantized) fine-tuning on chat-formatted prompts and outputs
+- **Training Instance**: Single NVIDIA T4 GPU
 
 ## Results Overview
 - MSE reduced from **8.56 → 1.99** after fine-tuning
