@@ -8,7 +8,7 @@ Fine-tuning was conducted using QLoRA (4-bit quantization) on chat-formatted inp
 - **Dataset**: OpenWebText subset (cleaned and structured)
 - **Data Augmentation**: Minority trait classes were synthetically augmented using GPT-4o-mini
 - **Labeling Source**: GPT-4o-mini
-- **Fine-Tuning Method**: QLoRA (8-rank adapters, NF4 quantization, bfloat16 training)
+- **Fine-Tuning Method**: QLoRA (8-rank adapters, NF4 quantization, float16 training)
 
 ---
 
